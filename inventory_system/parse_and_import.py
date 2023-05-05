@@ -11,25 +11,85 @@ def fetch_and_parse_java_files(local_folder):
         with open(java_file_path, 'r', encoding='utf-8') as java_file:
             java_text = java_file.read()
 
-            pattern = r'createItemTemplate\((\d+),.*?name="([^"]+)"'
-            file_item_data = re.findall(pattern, java_text, re.DOTALL)
-            item_data.extend(file_item_data)
+            pattern = r'(?<=\.)createItemTemplate\((\d+),\s*"([^"]+)",[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,([^,]*),([^,]*),'
+            for match in re.finditer(pattern, java_text, re.DOTALL):
+                item_data.append((match.group(1), match.group(2), float(match.group(3)), int(match.group(4))))
 
     return item_data
 
 def create_inventory_db(item_data, output_file):
-    print("Creating inventory.db...")
-    con = sqlite3.connect(output_file)
-    cur = con.cursor()
+    if os.path.exists(output_file):
+        print("The inventory.db file already exists. Skipping the creation process.")
+        return
 
-    cur.execute('''CREATE TABLE items
-                   (id INTEGER PRIMARY KEY, name TEXT NOT NULL)''')
+    conn = sqlite3.connect(output_file)
+    cursor = conn.cursor()
 
-    for item_id, item_name in item_data:
-        cur.execute('''INSERT INTO items (id, name) VALUES (?, ?)''', (item_id, item_name))
+    cursor.execute('''
+        CREATE TABLE ITEMS (
+            TEMPLATEID INT,
+            NAME VARCHAR (40),
+            DESCRIPTION VARCHAR (256),
+            PLACE SMALLINT,
+            QUALITYLEVEL FLOAT,
+            ORIGINALQUALITYLEVEL FLOAT,
+            CAPACITY FLOAT,
+            PARENTID BIGINT,
+            LASTMAINTAINED BIGINT,
+            CREATIONDATE BIGINT NOT NULL DEFAULT 0,
+            CREATIONSTATE TINYINT NOT NULL DEFAULT 0,
+            OWNERID BIGINT,
+            LASTOWNERID BIGINT,
+            TEMPERATURE SMALLINT,
+            POSX FLOAT,
+            POSY FLOAT,
+            POSZ FLOAT,
+            ROTATION FLOAT,
+            ZONEID INT,
+            DAMAGE FLOAT,
+            SIZEX INT,
+            SIZEY INT,
+            SIZEZ INT,
+            WEIGHT INT,
+            MATERIAL TINYINT,
+            LOCKID BIGINT,
+            PRICE INT NOT NULL DEFAULT 0,
+            BLESS TINYINT NOT NULL DEFAULT 0,
+            ENCHANT TINYINT NOT NULL DEFAULT 0,
+            BANKED TINYINT (1) NOT NULL DEFAULT 0,
+            AUXDATA TINYINT NOT NULL DEFAULT 0,
+            WORNARMOUR TINYINT (1) NOT NULL DEFAULT 0,
+            REALTEMPLATE INT NOT NULL DEFAULT -10,
+            COLOR INT NOT NULL DEFAULT -1,
+            FEMALE TINYINT (1) NOT NULL DEFAULT 0,
+            MAILED TINYINT (1) NOT NULL DEFAULT 0,
+            MAILTIMES TINYINT NOT NULL DEFAULT 0,
+            TRANSFERRED TINYINT (1) NOT NULL DEFAULT 0,
+            CREATOR VARCHAR (40) NOT NULL DEFAULT "",
+            HIDDEN TINYINT (1) NOT NULL DEFAULT 0,
+            RARITY TINYINT NOT NULL DEFAULT 0,
+            ONBRIDGE BIGINT NOT NULL DEFAULT -10,
+            SETTINGS INT NOT NULL DEFAULT 0,
+            COLOR2 INT NOT NULL DEFAULT -1,
+            PLACEDONPARENT TINYINT (1) NOT NULL DEFAULT 0,
+            PRIMARY KEY(TEMPLATEID)
+        )
+    ''')
 
-    con.commit()
-    con.close()
+    # Insert the item data into the ITEMS table
+    for item in item_data:
+        cursor.execute("INSERT INTO ITEMS (TEMPLATEID, NAME, DESCRIPTION, ...) VALUES (?, ?, ?, ...)", item)
+
+    conn.commit()
+    conn.close()
+#   for item in item_data:
+#        cursor.execute("INSERT OR IGNORE INTO inventory (id, name, weight, material) VALUES (?, ?, ?, ?)", item)
+#
+#    conn.commit()
+#    conn.close()
+    print("Inventory database created successfully.")
+
+
 
 def main():
     local_folder = 'import'

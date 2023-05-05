@@ -17,28 +17,23 @@ def create_table():
     conn.commit()
     conn.close()
 
-def fetch_and_parse_java_files(folder_url):
-    # Download the file list from the folder containing the Java files
-    file_list_response = requests.get(folder_url)
-    file_list = file_list_response.text.split('\n')
-
+def fetch_and_parse_java_files(local_folder):
+    print("Fetching and parsing Java files...")
     item_data = []
 
-    for file_name in file_list:
-        if not file_name.strip():
-            continue
+    for java_file_path in glob(os.path.join(local_folder, '*.java')):
+        with open(java_file_path, 'r', encoding='utf-8') as java_file:
+            java_text = java_file.read()
 
-        file_url = f"{folder_url}/{file_name}"
-        response = requests.get(file_url)
-        java_file = response.text
-
-        pattern = r'createItemTemplate\((\d+),.*?name="([^"]+)"'
-        file_item_data = re.findall(pattern, java_file, re.DOTALL)
-        item_data.extend(file_item_data)
+            pattern = r'createItemTemplate\((\d+),.*?name="([^"]+)"'
+            file_item_data = re.findall(pattern, java_text, re.DOTALL)
+            item_data.extend(file_item_data)
 
     return item_data
 
+
 def import_items(item_data):
+    print("Importing items into the database...")
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
@@ -50,9 +45,11 @@ def import_items(item_data):
     conn.close()
 
 if __name__ == "__main__":
+    print("Creating table in the database...")
     create_table()
 
     # Replace this URL with the URL of the folder containing the Java files
-    folder_url = "https://github.com/tigartar/wurm-inventory/tree/main/inventory_system/Import"
-    item_data = fetch_and_parse_java_files(folder_url)
+    local_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "import")
+    item_data = fetch_and_parse_java_files(local_folder)
     import_items(item_data)
+	print("Completed.")

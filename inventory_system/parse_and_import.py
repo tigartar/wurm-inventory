@@ -1,19 +1,20 @@
 import os
 import re
 import sqlite3
-from glob import glob
+import sys
 
-def fetch_and_parse_java_files(local_folder):
-    print("Fetching and parsing Java files...")
+def fetch_and_parse_java_files(input_folder):
     item_data = []
 
-    for java_file_path in glob(os.path.join(local_folder, '*.java')):
-        with open(java_file_path, 'r', encoding='utf-8') as java_file:
-            java_text = java_file.read()
-
-            pattern = r'(?<=\.)createItemTemplate\((\d+),\s*"([^"]+)",[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,([^,]*),([^,]*),'
-            for match in re.finditer(pattern, java_text, re.DOTALL):
-                item_data.append((match.group(1), match.group(2), float(match.group(3)), int(match.group(4))))
+    for root, _, files in os.walk(input_folder):
+        for file in files:
+            if file.endswith('.java'):
+                with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    matches = re.findall('createItemTemplate\((.*?)\);', content, re.DOTALL)
+                    for match in matches:
+                        values = [value.strip() for value in match.split(',')]
+                        item_data.append(values)
 
     return item_data
 

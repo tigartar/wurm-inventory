@@ -52,4 +52,3 @@ if __name__ == "__main__":
     local_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "import")
     item_data = fetch_and_parse_java_files(local_folder)
     import_items(item_data)
-	print("Completed.")

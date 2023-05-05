@@ -2,6 +2,7 @@ import os
 import sqlite3
 import requests
 import re
+from glob import glob
 
 # Define the path to the instance folder
 instance_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
@@ -16,13 +17,24 @@ def create_table():
     conn.commit()
     conn.close()
 
-def fetch_and_parse_java_file():
-    url = "https://raw.githubusercontent.com/tigartar/testserver/main/server-src/server/items/ItemTemplateCreator.java"
-    response = requests.get(url)
-    java_file = response.text
+def fetch_and_parse_java_files(folder_url):
+    # Download the file list from the folder containing the Java files
+    file_list_response = requests.get(folder_url)
+    file_list = file_list_response.text.split('\n')
 
-    pattern = r'createItemTemplate\((\d+),.*?name="([^"]+)"'
-    item_data = re.findall(pattern, java_file, re.DOTALL)
+    item_data = []
+
+    for file_name in file_list:
+        if not file_name.strip():
+            continue
+
+        file_url = f"{folder_url}/{file_name}"
+        response = requests.get(file_url)
+        java_file = response.text
+
+        pattern = r'createItemTemplate\((\d+),.*?name="([^"]+)"'
+        file_item_data = re.findall(pattern, java_file, re.DOTALL)
+        item_data.extend(file_item_data)
 
     return item_data
 
@@ -39,5 +51,8 @@ def import_items(item_data):
 
 if __name__ == "__main__":
     create_table()
-    item_data = fetch_and_parse_java_file()
+
+    # Replace this URL with the URL of the folder containing the Java files
+    folder_url = "https://github.com/tigartar/wurm-inventory/tree/main/inventory_system/Import"
+    item_data = fetch_and_parse_java_files(folder_url)
     import_items(item_data)

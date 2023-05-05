@@ -32,6 +32,7 @@ def fetch_and_parse_java_files(local_folder):
     return item_data
 
 
+
 def import_items(item_data):
     print("Importing items into the database...")
     conn = sqlite3.connect(db_path)

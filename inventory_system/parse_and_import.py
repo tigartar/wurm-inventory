@@ -14,90 +14,44 @@ def fetch_and_parse_java_files(input_folder):
                     matches = re.findall('createItemTemplate\((.*?)\);', content, re.DOTALL)
                     for match in matches:
                         values = [value.strip() for value in match.split(',')]
-                        item_data.append(values)
+                        item_data.append(values[:6])  # Assuming the first 6 values correspond to the columns in the table
 
     return item_data
 
 def create_inventory_db(item_data, output_file):
-    if os.path.exists(output_file):
-        print("The inventory.db file already exists. Skipping the creation process.")
-        return
-
     conn = sqlite3.connect(output_file)
     cursor = conn.cursor()
 
-    cursor.execute('''
-        CREATE TABLE ITEMS (
-            TEMPLATEID INT,
-            NAME VARCHAR (40),
-            DESCRIPTION VARCHAR (256),
-            PLACE SMALLINT,
-            QUALITYLEVEL FLOAT,
-            ORIGINALQUALITYLEVEL FLOAT,
-            CAPACITY FLOAT,
-            PARENTID BIGINT,
-            LASTMAINTAINED BIGINT,
-            CREATIONDATE BIGINT NOT NULL DEFAULT 0,
-            CREATIONSTATE TINYINT NOT NULL DEFAULT 0,
-            OWNERID BIGINT,
-            LASTOWNERID BIGINT,
-            TEMPERATURE SMALLINT,
-            POSX FLOAT,
-            POSY FLOAT,
-            POSZ FLOAT,
-            ROTATION FLOAT,
-            ZONEID INT,
-            DAMAGE FLOAT,
-            SIZEX INT,
-            SIZEY INT,
-            SIZEZ INT,
-            WEIGHT INT,
-            MATERIAL TINYINT,
-            LOCKID BIGINT,
-            PRICE INT NOT NULL DEFAULT 0,
-            BLESS TINYINT NOT NULL DEFAULT 0,
-            ENCHANT TINYINT NOT NULL DEFAULT 0,
-            BANKED TINYINT (1) NOT NULL DEFAULT 0,
-            AUXDATA TINYINT NOT NULL DEFAULT 0,
-            WORNARMOUR TINYINT (1) NOT NULL DEFAULT 0,
-            REALTEMPLATE INT NOT NULL DEFAULT -10,
-            COLOR INT NOT NULL DEFAULT -1,
-            FEMALE TINYINT (1) NOT NULL DEFAULT 0,
-            MAILED TINYINT (1) NOT NULL DEFAULT 0,
-            MAILTIMES TINYINT NOT NULL DEFAULT 0,
-            TRANSFERRED TINYINT (1) NOT NULL DEFAULT 0,
-            CREATOR VARCHAR (40) NOT NULL DEFAULT "",
-            HIDDEN TINYINT (1) NOT NULL DEFAULT 0,
-            RARITY TINYINT NOT NULL DEFAULT 0,
-            ONBRIDGE BIGINT NOT NULL DEFAULT -10,
-            SETTINGS INT NOT NULL DEFAULT 0,
-            COLOR2 INT NOT NULL DEFAULT -1,
-            PLACEDONPARENT TINYINT (1) NOT NULL DEFAULT 0,
-            PRIMARY KEY(TEMPLATEID)
-        )
-    ''')
+    # Create the ITEMS table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS ITEMS (
+                        TEMPLATEID INTEGER PRIMARY KEY,
+                        NAME TEXT,
+                        DESCRIPTION TEXT,
+                        MODELNAME TEXT,
+                        SIZE INTEGER,
+                        WEIGHT REAL
+                      )''')
 
     # Insert the item data into the ITEMS table
     for item in item_data:
-        cursor.execute("INSERT INTO ITEMS (TEMPLATEID, NAME, DESCRIPTION, ...) VALUES (?, ?, ?, ...)", item)
+        # Convert the values to the appropriate data types
+        template_id = int(item[0])
+        name = str(item[1])
+        description = str(item[2])
+        model_name = str(item[3])
+        size = int(item[4])
+        weight = float(item[5])
+
+        cursor.execute("INSERT INTO ITEMS (TEMPLATEID, NAME, DESCRIPTION, MODELNAME, SIZE, WEIGHT) VALUES (?, ?, ?, ?, ?, ?)",
+                       (template_id, name, description, model_name, size, weight))
 
     conn.commit()
     conn.close()
-#   for item in item_data:
-#        cursor.execute("INSERT OR IGNORE INTO inventory (id, name, weight, material) VALUES (?, ?, ?, ?)", item)
-#
-#    conn.commit()
-#    conn.close()
-    print("Inventory database created successfully.")
 
 
+if __name__ == "__main__":
+    input_folder = sys.argv[1]
+    output_file = sys.argv[2]
 
-def main():
-    local_folder = 'import'
-    output_file = 'instance/inventory.db'
-
-    item_data = fetch_and_parse_java_files(local_folder)
+    item_data = fetch_and_parse_java_files(input_folder)
     create_inventory_db(item_data, output_file)
-
-if __name__ == '__main__':
-    main()
